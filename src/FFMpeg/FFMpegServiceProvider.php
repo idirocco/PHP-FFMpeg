@@ -13,11 +13,12 @@ namespace FFMpeg;
 
 use Doctrine\Common\Cache\ArrayCache;
 use Silex\Application;
-use Silex\ServiceProviderInterface;
+use Pimple\ServiceProviderInterface;
+use Pimple\Container;
 
 class FFMpegServiceProvider implements ServiceProviderInterface
 {
-    public function register(Application $app)
+    public function register(Container $app)
     {
         $app['ffmpeg.configuration'] = array();
         $app['ffmpeg.default.configuration'] = array(
@@ -29,11 +30,11 @@ class FFMpegServiceProvider implements ServiceProviderInterface
         );
         $app['ffmpeg.logger'] = null;
 
-        $app['ffmpeg.configuration.build'] = $app->share(function (Application $app) {
+        $app['ffmpeg.configuration.build'] = function(Application $app) {
             return array_replace($app['ffmpeg.default.configuration'], $app['ffmpeg.configuration']);
-        });
+        };
 
-        $app['ffmpeg'] = $app['ffmpeg.ffmpeg'] = $app->share(function (Application $app) {
+        $app['ffmpeg'] = $app['ffmpeg.ffmpeg'] = function(Application $app) {
             $configuration = $app['ffmpeg.configuration.build'];
 
             if (isset($configuration['ffmpeg.timeout'])) {
@@ -41,13 +42,13 @@ class FFMpegServiceProvider implements ServiceProviderInterface
             }
 
             return FFMpeg::create($configuration, $app['ffmpeg.logger'], $app['ffmpeg.ffprobe']);
-        });
+        };
 
-        $app['ffprobe.cache'] = $app->share(function () {
+        $app['ffprobe.cache'] = function (Application $app) {
             return new ArrayCache();
-        });
+        };
 
-        $app['ffmpeg.ffprobe'] = $app->share(function (Application $app) {
+        $app['ffmpeg.ffprobe'] = function (Application $app) {
             $configuration = $app['ffmpeg.configuration.build'];
 
             if (isset($configuration['ffmpeg.timeout'])) {
@@ -55,7 +56,7 @@ class FFMpegServiceProvider implements ServiceProviderInterface
             }
 
             return FFProbe::create($configuration, $app['ffmpeg.logger'], $app['ffprobe.cache']);
-        });
+        };        
     }
 
     public function boot(Application $app)
